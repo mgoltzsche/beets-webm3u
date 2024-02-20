@@ -24,6 +24,8 @@ smartplaylist:
   playlists:
   - name: all.m3u8
     query: ''
+  - name: subdir/another.m3u8
+    query: ''
 
 ytimport:
   directory: /data/ytimport

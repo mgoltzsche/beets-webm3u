@@ -1,2 +1,3 @@
 include README.md
-include beetsplug/webm3u/config_default.yaml
+include beetsplug/webm3u/templates/*.html
+include beetsplug/webm3u/static/**

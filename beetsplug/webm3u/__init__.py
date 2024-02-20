@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand, decargs
 from optparse import OptionParser
@@ -6,7 +6,7 @@ from beetsplug.web import ReverseProxied
 from beetsplug.webm3u.routes import bp
 
 
-class PlaylistServerPlugin(BeetsPlugin):
+class WebM3UPlugin(BeetsPlugin):
     def __init__(self):
         super().__init__()
         self.config.add(
@@ -63,7 +63,7 @@ def create_app():
 
     @app.route('/')
     def home():
-        return '<html><body><ul><li><a href="playlists">Playlists</a></li><li><a href="media">Audio files</a></ul></body></html>'
+        return render_template('index.html')
 
     app.register_blueprint(bp)
 
