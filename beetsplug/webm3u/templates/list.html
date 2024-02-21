@@ -3,30 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playlists</title>
+  <title>{{title}}</title>
   <link rel="stylesheet" type="text/css" href= "{{ url_for('static',filename='style.css') }}">
 </head>
 <body>
-<h1>Playlists</h1>
+<h1>{{title}}</h1>
 
 <p>
   <a href="javascript:history.back()">&#129176; back</a>
 </p>
 
 <ul>
-{% if path %}
   <li>
     <a href="../">..</a>
   </li>
-{% endif %}
 {% for dir in directories %}
     <li>
       <a href="{{ dir }}/">&#128193; {{ dir }}</a>
     </li>
 {% endfor %}
-{% for playlist in playlists %}
+{% for file in files %}
     <li>
-      <a href="{{ playlist.path }}">&#127925; {{ playlist.name }} <span>({{ humanize(playlist.size) }})</span></a>
+      <a href="{{ file.path }}">&#127925; {{ file.name }} <span>({{ humanize(file.size) }})</span></a>
     </li>
 {% endfor %}
 </ul>

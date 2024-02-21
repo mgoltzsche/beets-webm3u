@@ -37,7 +37,7 @@ Once the `webm3u` plugin is enabled within your beets configuration, you can run
 beet webm3u
 ```
 
-Once the server started, you can browse [`http://localhost:8339`](http://localhost:8339).
+You can browse the server at [`http://localhost:8339`](http://localhost:8339).
 
 ### CLI
 
@@ -68,3 +68,9 @@ make beets-sh
 
 A temporary beets library is written to `./data`.
 It can be removed by calling `make clean-data`.
+
+To just start the server, run:
+```sh
+make beets-webm3u
+```
+
