@@ -2,6 +2,7 @@ import os
 from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
 from pathlib import Path
+from urllib.parse import quote
 from beetsplug.webm3u.playlist import parse_playlist
 
 MIMETYPE_HTML = 'text/html'
@@ -31,12 +32,21 @@ def _send_playlist(filepath):
     return Response(stream_with_context(_transform_playlist(filepath)), mimetype=MIMETYPE_MPEGURL)
 
 def _transform_playlist(filepath):
+    music_dir = os.path.normpath(config['directory'].get())
+    playlist_dir = os.path.dirname(filepath)
+
     yield '#EXTM3U\n'
     for item in parse_playlist(filepath):
-        path = url_for('webm3u_bp.music', path=item.uri)
-        path = os.path.normpath(path)
-        uri = f"{request.host_url.rstrip('/')}{path}"
-        yield f"#EXTINF:{item.duration},{item.title}\n{uri}\n"
+        item_uri = item.uri
+        if item_uri.startswith('./') or item_uri.startswith('../'):
+            item_uri = os.path.join(playlist_dir, item_uri)
+        item_uri = os.path.normpath(item_uri)
+        item_uri = os.path.relpath(item_uri, music_dir)
+        if item_uri.startswith('../'):
+            raise ValueError(f"playlist {filepath} item path is outside the root directory: {item_uri}")
+        item_uri = url_for('webm3u_bp.music', path=item_uri)
+        item_uri = f"{request.host_url.rstrip('/')}{item_uri}"
+        yield f"#EXTINF:{item.duration},{item.title}\n{item_uri}\n"
 
 def _filter_m3u_files(filename):
     return filename.endswith('.m3u') or filename.endswith('.m3u8')
@@ -50,7 +60,6 @@ def _serve_files(title, root_dir, path, filter, handler):
     if not os.path.exists(abs_path):
         return abort(404)
     if os.path.isfile(abs_path):
-        # TODO: transform item URIs within playlist
         return handler(abs_path)
     else:
         f = _files(abs_path, filter)
@@ -63,6 +72,7 @@ def _serve_files(title, root_dir, path, filter, handler):
                 files=f,
                 directories=dirs,
                 humanize=_humanize_size,
+                quote=quote,
             )
         else:
             return jsonify({

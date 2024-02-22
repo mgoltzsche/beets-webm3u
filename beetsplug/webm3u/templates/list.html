@@ -19,12 +19,12 @@
   </li>
 {% for dir in directories %}
     <li>
-      <a href="{{ dir }}/">&#128193; {{ dir }}</a>
+      <a href="{{ quote(dir) }}/">&#128193; {{ dir }}</a>
     </li>
 {% endfor %}
 {% for file in files %}
     <li>
-      <a href="{{ file.path }}">&#127925; {{ file.name }} <span>({{ humanize(file.size) }})</span></a>
+      <a href="{{ quote(file.path) }}">&#127925; {{ file.name }} <span>({{ humanize(file.size) }})</span></a>
     </li>
 {% endfor %}
 </ul>
