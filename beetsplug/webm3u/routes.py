@@ -1,11 +1,12 @@
 import os
-from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify
+from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
 from pathlib import Path
 from beetsplug.webm3u.playlist import parse_playlist
 
 MIMETYPE_HTML = 'text/html'
 MIMETYPE_JSON = 'application/json'
+MIMETYPE_MPEGURL = 'audio/mpegurl'
 
 bp = Blueprint('webm3u_bp', __name__, template_folder='templates')
 
@@ -21,21 +22,21 @@ def playlists(path):
 @bp.route('/music/<path:path>')
 def music(path):
     root_dir = config['directory'].get()
-    return _serve_files('Files', root_dir, path, _filter_none, _send_file)
+    return _serve_files('Music', root_dir, path, _filter_none, _send_file)
 
 def _send_file(filepath):
     return send_file(filepath)
 
 def _send_playlist(filepath):
-    items = [_rewrite(item) for item in parse_playlist(filepath)]
-    lines = ['#EXTINF:{},{}\n{}'.format(i.duration, i.title, i.uri) for i in items]
-    return '#EXTM3U\n'+('\n'.join(lines))
+    return Response(stream_with_context(_transform_playlist(filepath)), mimetype=MIMETYPE_MPEGURL)
 
-def _rewrite(item):
-    path = url_for('webm3u_bp.music', path=item.uri)
-    path = os.path.normpath(path)
-    item.uri = '{}{}'.format(request.host_url.rstrip('/'), path)
-    return item
+def _transform_playlist(filepath):
+    yield '#EXTM3U\n'
+    for item in parse_playlist(filepath):
+        path = url_for('webm3u_bp.music', path=item.uri)
+        path = os.path.normpath(path)
+        uri = f"{request.host_url.rstrip('/')}{path}"
+        yield f"#EXTINF:{item.duration},{item.title}\n{uri}\n"
 
 def _filter_m3u_files(filename):
     return filename.endswith('.m3u') or filename.endswith('.m3u8')
@@ -98,12 +99,11 @@ def _check_path(root_dir, path):
     path = os.path.normpath(path)
     root_dir = os.path.normpath(root_dir)
     if path != root_dir and not path.startswith(root_dir+os.sep):
-        raise Exception('request path {} is outside the root directory {}'.format(path, root_dir))
+        raise Exception(f"request path {path} is outside the root directory {root_dir}")
 
 def _humanize_size(num):
-    suffix = 'B'
-    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
-        if abs(num) < 1024.0:
-            return f"{num:3.1f}{unit}{suffix}"
-        num /= 1024.0
-    return f"{num:.1f}Yi{suffix}"
+    for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
+        if abs(num) < 1000.0:
+            return f"{num:.0f}{unit}B"
+        num /= 1000.0
+    return f"{num:.1f}YB"
