@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
 from pathlib import Path
@@ -11,6 +12,8 @@ MIMETYPE_MPEGURL = 'audio/mpegurl'
 
 bp = Blueprint('webm3u_bp', __name__, template_folder='templates')
 
+_format_regex = re.compile(r'\$[a-z0-9_]+')
+
 @bp.route('/playlists/', defaults={'path': ''})
 @bp.route('/playlists/<path:path>')
 def playlists(path):
@@ -19,11 +22,11 @@ def playlists(path):
         root_dir = config['smartplaylist']['playlist_dir'].get()
     return _serve_files('Playlists', root_dir, path, _filter_m3u_files, _send_playlist)
 
-@bp.route('/music/', defaults={'path': ''})
-@bp.route('/music/<path:path>')
-def music(path):
+@bp.route('/audio/', defaults={'path': ''})
+@bp.route('/audio/<path:path>')
+def audio(path):
     root_dir = config['directory'].get()
-    return _serve_files('Music', root_dir, path, _filter_none, _send_file)
+    return _serve_files('Audio files', root_dir, path, _filter_none, _send_file)
 
 def _send_file(filepath):
     return send_file(filepath)
@@ -34,6 +37,7 @@ def _send_playlist(filepath):
 def _transform_playlist(filepath):
     music_dir = os.path.normpath(config['directory'].get())
     playlist_dir = os.path.dirname(filepath)
+    uri_format = request.args.get('uri-format')
 
     yield '#EXTM3U\n'
     for item in parse_playlist(filepath):
@@ -44,9 +48,15 @@ def _transform_playlist(filepath):
         item_uri = os.path.relpath(item_uri, music_dir)
         if item_uri.startswith('../'):
             raise ValueError(f"playlist {filepath} item path is outside the root directory: {item_uri}")
-        item_uri = url_for('webm3u_bp.music', path=item_uri)
+        item_uri = url_for('webm3u_bp.audio', path=item_uri)
         item_uri = f"{request.host_url.rstrip('/')}{item_uri}"
+        if uri_format:
+            item.attrs['url'] = item_uri
+            item_uri = _format_regex.sub(_format(item.attrs), uri_format)
         yield f"#EXTINF:{item.duration},{item.title}\n{item_uri}\n"
+
+def _format(attrs):
+    return lambda m: attrs.get(m.group(0)[1:])
 
 def _filter_m3u_files(filename):
     return filename.endswith('.m3u') or filename.endswith('.m3u8')

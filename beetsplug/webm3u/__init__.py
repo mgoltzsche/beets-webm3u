@@ -18,6 +18,7 @@ class WebM3UPlugin(BeetsPlugin):
                 'reverse_proxy': False,
                 'include_paths': False,
                 'playlist_dir': None,
+                'uri_format': None,
             }
         )
 

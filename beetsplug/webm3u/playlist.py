@@ -22,6 +22,8 @@ def parse_playlist(filepath):
                 attrs = m.group(2)
                 if attrs:
                     item.attrs = {k: v.strip('"') for k,v in [kv.split('=') for kv in attrs.strip().split(' ')]}
+                else:
+                    item.attrs = {}
                 item.title = m.group(3)
                 continue
             if line.startswith('#'):
