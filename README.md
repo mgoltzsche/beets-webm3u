@@ -49,6 +49,24 @@ Options:
   -d, --debug  debug mode
 ```
 
+## Web API
+
+The following endpoints allow listing and downloading playlist as well as audio files:
+
+* `GET /playlists/`: List available playlists.
+* `GET /playlists/*.m3u8[?uri-format=$url]`: Get/download a playlist. The `uri-format` parameter value is used as URI template for items within a playlist. Item attribute names prefixed with a `$` can be used as placeholders, e.g. `subsonic:track:$id`. `$url` is a built-in placeholder.
+* `GET /audio/`: List available audio files.
+* `GET /audio/*.opus`: Download/stream an audio file.
+
+The list endpoints return either a JSON or HTML response, supporting content type negotiation.
+A JSON response body looks as follows:
+```json
+{
+	"directories": [{"name":"some-dir"}],
+	"files": [{"name":"Afrobeat", "url":"afrobeat.m3u8"}],
+}
+```
+
 ## Development
 
 Run the unit tests (containerized):
