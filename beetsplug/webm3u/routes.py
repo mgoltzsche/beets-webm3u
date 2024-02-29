@@ -1,9 +1,10 @@
 import os
 import re
+import glob
 from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, quote_plus
 from beetsplug.webm3u.playlist import parse_playlist
 
 MIMETYPE_HTML = 'text/html'
@@ -14,12 +15,22 @@ bp = Blueprint('webm3u_bp', __name__, template_folder='templates')
 
 _format_regex = re.compile(r'\$[a-z0-9_]+')
 
+@bp.route('/playlists/index.m3u8')
+def playlist_index():
+    uri_format = request.args.get('uri-format')
+    root_dir = _playlist_dir()
+    playlists = glob.glob(os.path.join(root_dir, "**.m3u8"))
+    print(playlists)
+    q = ''
+    if uri_format:
+        q = f"?uri-format={quote_plus(uri_format)}"
+    lines = [_m3u_line(path, q) for path in playlists]
+    return f"#EXTM3U\n{''.join(lines)}"
+
 @bp.route('/playlists/', defaults={'path': ''})
 @bp.route('/playlists/<path:path>')
 def playlists(path):
-    root_dir = config['webm3u']['playlist_dir'].get()
-    if not root_dir:
-        root_dir = config['smartplaylist']['playlist_dir'].get()
+    root_dir = _playlist_dir()
     return _serve_files('Playlists', root_dir, path, _filter_m3u_files, _send_playlist)
 
 @bp.route('/audio/', defaults={'path': ''})
@@ -27,6 +38,17 @@ def playlists(path):
 def audio(path):
     root_dir = config['directory'].get()
     return _serve_files('Audio files', root_dir, path, _filter_none, _send_file)
+
+def _m3u_line(filepath, query):
+    title = Path(os.path.basename(filepath)).stem
+    uri = _item_url('playlists', filepath, _playlist_dir())
+    return f'#EXTINF:0,{title}\n{uri}{query}\n'
+
+def _playlist_dir():
+    root_dir = config['webm3u']['playlist_dir'].get()
+    if not root_dir:
+        return config['smartplaylist']['playlist_dir'].get()
+    return root_dir
 
 def _send_file(filepath):
     return send_file(filepath)
@@ -45,15 +67,16 @@ def _transform_playlist(filepath):
         if item_uri.startswith('./') or item_uri.startswith('../'):
             item_uri = os.path.join(playlist_dir, item_uri)
         item_uri = os.path.normpath(item_uri)
-        item_uri = os.path.relpath(item_uri, music_dir)
-        if item_uri.startswith('../'):
-            raise ValueError(f"playlist {filepath} item path is outside the root directory: {item_uri}")
-        item_uri = url_for('webm3u_bp.audio', path=item_uri)
-        item_uri = f"{request.host_url.rstrip('/')}{item_uri}"
+        item_uri = _item_url('audio', item_uri, music_dir)
         if uri_format:
             item.attrs['url'] = item_uri
             item_uri = _format_regex.sub(_format(item.attrs), uri_format)
         yield f"#EXTINF:{item.duration},{item.title}\n{item_uri}\n"
+
+def _item_url(endpoint, filepath, root_dir):
+    item_uri = os.path.relpath(filepath, root_dir)
+    item_uri = url_for(f'webm3u_bp.{endpoint}', path=item_uri)
+    return f"{request.host_url.rstrip('/')}{item_uri}"
 
 def _format(attrs):
     return lambda m: attrs.get(m.group(0)[1:])
@@ -92,7 +115,7 @@ def _serve_files(title, root_dir, path, filter, handler):
 
 def _files(dir, filter):
     l = [f for f in os.listdir(dir) if _is_file(dir, f) and filter(f)]
-    l.sort()    
+    l.sort()
     return [_file_dto(dir, f) for f in l]
 
 def _file_dto(dir, filename):
