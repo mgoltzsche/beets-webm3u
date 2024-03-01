@@ -20,7 +20,7 @@ def playlist_index():
     uri_format = request.args.get('uri-format')
     root_dir = _playlist_dir()
     playlists = glob.glob(os.path.join(root_dir, "**.m3u8"))
-    print(playlists)
+    playlists.sort()
     q = ''
     if uri_format:
         q = f"?uri-format={quote_plus(uri_format)}"
