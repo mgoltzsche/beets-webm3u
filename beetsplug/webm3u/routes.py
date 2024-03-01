@@ -37,7 +37,7 @@ def playlists(path):
 @bp.route('/audio/<path:path>')
 def audio(path):
     root_dir = config['directory'].get()
-    return _serve_files('Audio files', root_dir, path, _filter_none, _send_file)
+    return _serve_files('Audio files', root_dir, path, _filter_none, send_file)
 
 def _m3u_line(filepath, query):
     title = Path(os.path.basename(filepath)).stem
@@ -49,9 +49,6 @@ def _playlist_dir():
     if not root_dir:
         return config['smartplaylist']['playlist_dir'].get()
     return root_dir
-
-def _send_file(filepath):
-    return send_file(filepath)
 
 def _send_playlist(filepath):
     return Response(stream_with_context(_transform_playlist(filepath)), mimetype=MIMETYPE_MPEGURL)

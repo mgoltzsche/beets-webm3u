@@ -27,6 +27,7 @@ webm3u:
   cors_supports_credentials: false
   reverse_proxy: false
   include_paths: false
+  # Can be omitted when smartplaylist plugin is configured:
   playlist_dir: /data/playlists
 ```
 

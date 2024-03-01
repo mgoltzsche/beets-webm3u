@@ -30,7 +30,9 @@ class WebM3UPlugin(BeetsPlugin):
         return [c]
 
     def _run_server(self, lib, opts, args):
-        create_app().run(
+        app = create_app()
+        self._configure_app(app, lib)
+        app.run(
             host=self.config['host'].as_str(),
             port=self.config['port'].get(int),
             debug=opts.debug,
