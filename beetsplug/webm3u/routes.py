@@ -76,7 +76,8 @@ def _item_url(endpoint, filepath, root_dir):
     return f"{request.host_url.rstrip('/')}{item_uri}"
 
 def _format(attrs):
-    return lambda m: attrs.get(m.group(0)[1:])
+    print(attrs)
+    return lambda m: attrs[m.group(0)[1:]]
 
 def _filter_m3u_files(filename):
     return filename.endswith('.m3u') or filename.endswith('.m3u8')
