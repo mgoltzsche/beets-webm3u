@@ -1,7 +1,7 @@
 import os
 import re
 import glob
-from flask import Flask, Blueprint, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
+from flask import Flask, Blueprint, current_app, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
 from pathlib import Path
 from urllib.parse import quote, quote_plus
@@ -57,6 +57,7 @@ def _transform_playlist(filepath):
     music_dir = os.path.normpath(config['directory'].get())
     playlist_dir = os.path.dirname(filepath)
     uri_format = request.args.get('uri-format')
+    skipped = False
 
     yield '#EXTM3U\n'
     for item in parse_playlist(filepath):
@@ -67,7 +68,14 @@ def _transform_playlist(filepath):
         item_uri = _item_url('audio', item_uri, music_dir)
         if uri_format:
             item.attrs['url'] = item_uri
-            item_uri = _format_regex.sub(_format(item.attrs), uri_format)
+            try:
+                item_uri = _format_regex.sub(_format(item.attrs), uri_format)
+            except KeyError as e:
+                if not skipped:
+                    skipped = True
+                    msg = f"Skipping playlist item(s) because URI format refers to missing key {e}"
+                    current_app.logger.warning(msg)
+                continue
         yield f"#EXTINF:{item.duration},{item.title}\n{item_uri}\n"
 
 def _item_url(endpoint, filepath, root_dir):
@@ -76,7 +84,6 @@ def _item_url(endpoint, filepath, root_dir):
     return f"{request.host_url.rstrip('/')}{item_uri}"
 
 def _format(attrs):
-    print(attrs)
     return lambda m: attrs[m.group(0)[1:]]
 
 def _filter_m3u_files(filename):
