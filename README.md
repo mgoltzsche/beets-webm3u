@@ -75,6 +75,8 @@ A JSON response body looks as follows:
 
 ## Development
 
+The following assumes you have [docker](https://docs.docker.com/engine/install/) installed.
+
 Run the unit tests (containerized):
 ```sh
 make test
