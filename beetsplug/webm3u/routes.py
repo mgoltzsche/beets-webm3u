@@ -1,11 +1,11 @@
 import os
 import re
 import glob
-from flask import Flask, Blueprint, current_app, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from beets import config
+from flask import Flask, Blueprint, current_app, send_from_directory, send_file, abort, render_template, request, url_for, jsonify, Response, stream_with_context
 from pathlib import Path
 from urllib.parse import quote, quote_plus
-from beetsplug.webm3u.playlist import parse_playlist
+from werkzeug.utils import safe_join
 
 MIMETYPE_HTML = 'text/html'
 MIMETYPE_JSON = 'application/json'
@@ -18,8 +18,9 @@ _format_regex = re.compile(r'\$[a-z0-9_]+')
 @bp.route('/playlists/index.m3u8')
 def playlist_index():
     uri_format = request.args.get('uri-format')
-    root_dir = _playlist_dir()
-    playlists = glob.glob(os.path.join(root_dir, "**.m3u8"))
+    playlist_dir = playlist_provider().dir
+    playlists = glob.glob(os.path.join(playlist_dir, "**.m3u8"))
+    playlists += glob.glob(os.path.join(playlist_dir, "**.m3u"))
     playlists.sort()
     q = ''
     if uri_format:
@@ -30,37 +31,38 @@ def playlist_index():
 @bp.route('/playlists/', defaults={'path': ''})
 @bp.route('/playlists/<path:path>')
 def playlists(path):
-    root_dir = _playlist_dir()
-    return _serve_files('Playlists', root_dir, path, _filter_m3u_files, _send_playlist)
+    playlist_dir = playlist_provider().dir
+    return _serve_files('playlists.html', 'Playlists', playlist_dir, path, _filter_m3u_files, _send_playlist, _playlist_info)
 
 @bp.route('/audio/', defaults={'path': ''})
 @bp.route('/audio/<path:path>')
 def audio(path):
     root_dir = config['directory'].get()
-    return _serve_files('Audio files', root_dir, path, _filter_none, send_file)
+    return _serve_files('files.html', 'Audio files', root_dir, path, _filter_none, send_file, _file_info)
 
 def _m3u_line(filepath, query):
     title = Path(os.path.basename(filepath)).stem
-    uri = _item_url('playlists', filepath, _playlist_dir())
+    playlist_dir = playlist_provider().dir
+    uri = _item_url('playlists', filepath, playlist_dir)
     return f'#EXTINF:0,{title}\n{uri}{query}\n'
 
-def _playlist_dir():
-    root_dir = config['webm3u']['playlist_dir'].get()
-    if not root_dir:
-        return config['smartplaylist']['playlist_dir'].get()
-    return root_dir
-
 def _send_playlist(filepath):
-    return Response(stream_with_context(_transform_playlist(filepath)), mimetype=MIMETYPE_MPEGURL)
+    provider = playlist_provider()
+    relpath = os.path.relpath(filepath, provider.dir)
+    playlist = provider.playlist(relpath)
+    return Response(stream_with_context(_transform_playlist(playlist)), mimetype=MIMETYPE_MPEGURL)
 
-def _transform_playlist(filepath):
+def playlist_provider():
+    return current_app.config['playlist_provider']
+
+def _transform_playlist(playlist):
     music_dir = os.path.normpath(config['directory'].get())
-    playlist_dir = os.path.dirname(filepath)
+    playlist_dir = playlist_provider().dir
     uri_format = request.args.get('uri-format')
     skipped = False
 
     yield '#EXTM3U\n'
-    for item in parse_playlist(filepath):
+    for item in playlist.items():
         item_uri = item.uri
         if item_uri.startswith('./') or item_uri.startswith('../'):
             item_uri = os.path.join(playlist_dir, item_uri)
@@ -92,24 +94,24 @@ def _filter_m3u_files(filename):
 def _filter_none(filename):
     return True
 
-def _serve_files(title, root_dir, path, filter, handler):
-    abs_path = os.path.join(root_dir, path)
-    _check_path(root_dir, abs_path)
+def _serve_files(tpl, title, root_dir, path, filter, handler, infofn):
+    abs_path = safe_join(root_dir, path)
     if not os.path.exists(abs_path):
         return abort(404)
     if os.path.isfile(abs_path):
         return handler(abs_path)
     else:
-        f = _files(abs_path, filter)
+        f = _files(abs_path, filter, infofn)
         dirs = _directories(abs_path)
         mimetypes = (MIMETYPE_JSON, MIMETYPE_HTML)
         mimetype = request.accept_mimetypes.best_match(mimetypes, MIMETYPE_JSON)
         if mimetype == MIMETYPE_HTML:
-            return render_template('list.html',
+            return render_template(tpl,
                 title=title,
                 files=f,
                 directories=dirs,
-                humanize=_humanize_size,
+                humanize_size=_humanize_size,
+                humanize_duration=_humanize_duration,
                 quote=quote,
             )
         else:
@@ -118,17 +120,29 @@ def _serve_files(title, root_dir, path, filter, handler):
                 'files': f,
             })
 
-def _files(dir, filter):
+def _files(dir, filter, infofn):
     l = [f for f in os.listdir(dir) if _is_file(dir, f) and filter(f)]
     l.sort()
-    return [_file_dto(dir, f) for f in l]
+    return [infofn(dir, f) for f in l]
 
-def _file_dto(dir, filename):
-    st = os.stat(os.path.join(dir, filename))
+def _file_info(dir, filename):
+    st = os.stat(safe_join(dir, filename))
     return {
         'name': Path(filename).stem,
         'path': filename,
         'size': st.st_size,
+    }
+
+def _playlist_info(dir, filename):
+    filepath = os.path.join(dir, filename)
+    relpath = os.path.relpath(filepath, playlist_provider().dir)
+    playlist = playlist_provider().playlist(relpath)
+    return {
+        'name': playlist.name,
+        'path': playlist.id,
+        'count': playlist.count,
+        'duration': playlist.duration,
+        'info': playlist.artists,
     }
 
 def _is_file(dir, filename):
@@ -143,15 +157,25 @@ def _directories(dir):
 def _join(dir, filename):
     return os.path.join(dir, filename)
 
-def _check_path(root_dir, path):
-    path = os.path.normpath(path)
-    root_dir = os.path.normpath(root_dir)
-    if path != root_dir and not path.startswith(root_dir+os.sep):
-        raise Exception(f"request path {path} is outside the root directory {root_dir}")
-
 def _humanize_size(num):
     for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
         if abs(num) < 1000.0:
             return f"{num:.0f}{unit}B"
         num /= 1000.0
     return f"{num:.1f}YB"
+
+minute = 60
+hour = 60 * minute
+day = 24 * hour
+
+def _humanize_duration(seconds):
+    days = seconds / day
+    if days > 1:
+        return '{:.0f}d'.format(days)
+    hours = seconds / hour
+    if hours > 1:
+        return '{:.0f}h'.format(hours)
+    minutes = seconds / minute
+    if minutes > 1:
+        return '{:.0f}m'.format(minutes)
+    return '{:.0f}s'.format(seconds)

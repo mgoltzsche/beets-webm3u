@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <link rel="stylesheet" type="text/css" href= "{{ url_for('static',filename='style.css') }}">
+</head>
+<body>
+<h1>{{title}}</h1>
+
+<p>
+  <a href="javascript:history.back()">&#129176; back</a>
+</p>
+
+<ul>
+  <li>
+    <a href="../">..</a>
+  </li>
+{% for dir in directories %}
+    <li>
+      <a href="{{ quote(dir) }}/">&#128193; {{ dir }}</a>
+    </li>
+{% endfor %}
+{% for file in files %}
+    <li>
+      <a href="{{ quote(file.path) }}">&#127925; {{ file.name }} <span>&nbsp;&#128337;{{ humanize_duration(file.duration) }} &#119672;{{ file.count }} &bull; {{ file.info }}</span></a>
+    </li>
+{% endfor %}
+</ul>
+</body>
+</html>

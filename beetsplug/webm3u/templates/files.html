@@ -24,7 +24,7 @@
 {% endfor %}
 {% for file in files %}
     <li>
-      <a href="{{ quote(file.path) }}">&#127925; {{ file.name }} <span>({{ humanize(file.size) }})</span></a>
+      <a href="{{ quote(file.path) }}">&#127925; {{ file.name }} <span>({{ humanize_size(file.size) }})</span></a>
     </li>
 {% endfor %}
 </ul>

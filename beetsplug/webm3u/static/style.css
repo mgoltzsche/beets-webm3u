@@ -11,9 +11,12 @@ ul, li {
 li a {
   display: block;
   padding: 0.5em 1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 li a span {
-  font-size: 0.7em
+  font-size: 0.7em;
 }
 li:nth-child(odd) {
   background-color: #fafafa;

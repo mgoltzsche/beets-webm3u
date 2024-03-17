@@ -1,9 +1,11 @@
 from flask import Flask, render_template
+from beets import config
 from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand, decargs
 from optparse import OptionParser
 from beetsplug.web import ReverseProxied
 from beetsplug.webm3u.routes import bp
+from beetsplug.webm3u.playlist import PlaylistProvider
 
 
 class WebM3UPlugin(BeetsPlugin):
@@ -63,6 +65,12 @@ class WebM3UPlugin(BeetsPlugin):
 
 def create_app():
     app = Flask(__name__)
+
+    playlist_dir = config['webm3u']['playlist_dir'].get()
+    if not playlist_dir:
+        playlist_dir = config['smartplaylist']['playlist_dir'].get()
+
+    app.config['playlist_provider'] = PlaylistProvider(playlist_dir)
 
     @app.route('/')
     def home():
