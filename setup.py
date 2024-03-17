@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='beets-webm3u',
-    version='0.0.0-dev',
+    version='0.6.0',
     author='Max Goltzsche',
     description='Serve M3U playlists via HTTP',
     long_description=long_description,
