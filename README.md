@@ -54,22 +54,22 @@ Options:
 
 The following endpoints allow listing and downloading playlist as well as audio files:
 
-* `GET /playlists/index.m3u8[?uri-format=$url]`: Returns a playlist that contains the URLs of other playlists.
+* `GET /playlists/index.m3u[?uri-format=$url]`: Returns the playlist of playlists.
 * `GET /playlists/`: List available playlists.
-* `GET /playlists/*.m3u8[?uri-format=$url]`: Get/download a playlist.
+* `GET /playlists/*.m3u[?uri-format=$url]`: Get/download a playlist.
 * `GET /audio/`: List available audio files.
 * `GET /audio/*.opus`: Download/stream an audio file.
 
 The `uri-format` parameter allows specifying a playlist item URI template.
-Item attribute names prefixed with a `$` can be used as placeholders, e.g. `subsonic:track:$id`.
-`$url` is a built-in placeholder.
+Item field names prefixed with a `$` can be used as placeholders, e.g. `beets:library:track;$id`.
+`$url` is a built-in placeholder and the default value.
 
 The list endpoints return either a JSON or HTML response, supporting content type negotiation.
 A JSON response body looks as follows:
 ```json
 {
 	"directories": [{"name":"some-dir"}],
-	"files": [{"name":"Afrobeat", "url":"afrobeat.m3u8"}],
+	"files": [{"name":"afrobeat", "url":"afrobeat.m3u"}],
 }
 ```
 

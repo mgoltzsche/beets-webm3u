@@ -15,7 +15,7 @@ bp = Blueprint('webm3u_bp', __name__, template_folder='templates')
 
 _format_regex = re.compile(r'\$[a-z0-9_]+')
 
-@bp.route('/playlists/index.m3u8')
+@bp.route('/playlists/index.m3u')
 def playlist_index():
     uri_format = request.args.get('uri-format')
     playlist_dir = playlist_provider().dir
