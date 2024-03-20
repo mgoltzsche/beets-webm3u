@@ -31,7 +31,7 @@ class PlaylistProvider:
     def playlists(self):
         self._refresh()
         playlists = self._playlists
-        ids = [k for k, v in playlists if v]
+        ids = [k for k, v in playlists.items() if v]
         ids.sort()
         return [playlists[id] for id in ids]
 
