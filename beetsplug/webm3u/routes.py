@@ -77,6 +77,7 @@ def _transform_playlist(playlist):
                     skipped = True
                     msg = f"Skipping playlist item(s) because URI format refers to missing key {e}"
                     current_app.logger.warning(msg)
+                    yield f"# {msg}\n"
                 continue
         yield f"#EXTINF:{item.duration},{item.title}\n{item_uri}\n"
 
@@ -123,7 +124,8 @@ def _serve_files(tpl, title, root_dir, path, filter, handler, infofn):
 def _files(dir, filter, infofn):
     l = [f for f in os.listdir(dir) if _is_file(dir, f) and filter(f)]
     l.sort()
-    return [infofn(dir, f) for f in l]
+    files = [infofn(dir, f) for f in l]
+    return [f for f in files if f]
 
 def _file_info(dir, filename):
     st = os.stat(safe_join(dir, filename))
@@ -136,14 +138,18 @@ def _file_info(dir, filename):
 def _playlist_info(dir, filename):
     filepath = os.path.join(dir, filename)
     relpath = os.path.relpath(filepath, playlist_provider().dir)
-    playlist = playlist_provider().playlist(relpath)
-    return {
-        'name': playlist.name,
-        'path': playlist.id,
-        'count': playlist.count,
-        'duration': playlist.duration,
-        'info': playlist.artists,
-    }
+    try:
+        playlist = playlist_provider().playlist(relpath)
+        return {
+            'name': playlist.name,
+            'path': playlist.id,
+            'count': playlist.count,
+            'duration': playlist.duration,
+            'info': playlist.artists,
+        }
+    except Exception as e:
+        current_app.logger.error(f"Failed to load playlist {filepath}: {e}")
+        return None
 
 def _is_file(dir, filename):
     f = os.path.join(dir, filename)

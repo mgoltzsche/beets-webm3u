@@ -40,6 +40,8 @@ beet webm3u
 
 You can browse the server at [`http://localhost:8339`](http://localhost:8339).
 
+To serve multiple beets web APIs using a single process, you can use the [webrouter plugin](https://github.com/mgoltzsche/beets-webrouter).
+
 ### CLI
 
 ```
@@ -99,4 +101,3 @@ To just start the server, run:
 ```sh
 make beets-webm3u
 ```
-
