@@ -71,7 +71,7 @@ A JSON response body looks as follows:
 ```json
 {
 	"directories": [{"name":"some-dir"}],
-	"files": [{"name":"afrobeat", "url":"afrobeat.m3u"}],
+	"files": [{"name":"afrobeat", "path":"afrobeat.m3u"}],
 }
 ```
 
