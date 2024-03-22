@@ -3,6 +3,7 @@ import os
 import pathlib
 import re
 import sys
+import unicodedata
 from flask import current_app as app
 from werkzeug.utils import safe_join
 
@@ -91,7 +92,7 @@ def _sortedartists(artists):
 
 class Artist:
     def __init__(self, name):
-        self.key = name.lower()
+        self.key = _strip_accents(name.lower())
         self.name = name
         self.count = 1
 
@@ -135,3 +136,6 @@ class PlaylistItem():
         self.duration = None
         self.uri = None
         self.attrs = None
+
+def _strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
