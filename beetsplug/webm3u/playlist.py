@@ -92,7 +92,7 @@ def _sortedartists(artists):
 
 class Artist:
     def __init__(self, name):
-        self.key = _strip_accents(name.lower())
+        self.key = _normalize(name.lower())
         self.name = name
         self.count = 1
 
@@ -136,6 +136,17 @@ class PlaylistItem():
         self.duration = None
         self.uri = None
         self.attrs = None
+
+def normalize(s):
+    s = strip_accents(s)
+    s = normalize_apostroph(s)
+    return s
+
+def normalize_apostroph(s):
+    return s.replace('’', "'")
+
+def strip_accents(s):
+    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
 
 def _strip_accents(s):
     return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
