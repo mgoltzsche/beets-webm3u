@@ -63,7 +63,7 @@ The following endpoints allow listing and downloading playlist as well as audio 
 * `GET /audio/*.opus`: Download/stream an audio file.
 
 The `uri-format` parameter allows specifying a playlist item URI template.
-Item field names prefixed with a `$` can be used as placeholders, e.g. `beets:library:track;$id`.
+Item field names prefixed with a `$` can be used as placeholders, e.g. `beets:library:track;$id` or `subidy:song:3$id`.
 `$url` is a built-in placeholder and the default value.
 
 The list endpoints return either a JSON or HTML response, supporting content type negotiation.
