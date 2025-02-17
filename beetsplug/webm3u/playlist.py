@@ -5,6 +5,7 @@ import re
 import sys
 import unicodedata
 from flask import current_app as app
+from urllib.parse import unquote
 from werkzeug.utils import safe_join
 
 extinf_regex = re.compile(r'^#EXTINF:([0-9]+)( [^,]+)?,[\s]*(.*)')
@@ -99,7 +100,6 @@ class Artist:
 def parse_m3u_playlist(filepath):
     '''
     Parses an M3U playlist and yields its items, one at a time.
-    CAUTION: Attribute values that contain ',' or ' ' are not supported!
     '''
     with open(filepath, 'r', encoding='UTF-8') as file:
         linenum = 0
@@ -119,7 +119,7 @@ def parse_m3u_playlist(filepath):
                 item.duration = int(duration)
                 attrs = m.group(2)
                 if attrs:
-                    item.attrs = {k: v.strip('"') for k,v in [kv.split('=') for kv in attrs.strip().split(' ')]}
+                    item.attrs = {k: unquote(v.strip('"')) for k,v in [kv.split('=') for kv in attrs.strip().split(' ')]}
                 else:
                     item.attrs = {}
                 item.title = m.group(3)
